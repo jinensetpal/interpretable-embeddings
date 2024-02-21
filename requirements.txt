@@ -1,0 +1,4 @@
+auto_mix_prep==0.2.0
+mlflow==2.10.2
+scanpy==1.9.8
+torch==2.2.0
