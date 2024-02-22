@@ -4,6 +4,7 @@ from pathlib import Path
 import torch
 
 BASE_DIR = Path(__file__).parent.parent
+MODEL_DIR = BASE_DIR / 'models'
 DATA_DIR = BASE_DIR / 'data'
 FEATURES_DIR = DATA_DIR / 'expression' / '634da99d771a5b05d92a59cf'
 
