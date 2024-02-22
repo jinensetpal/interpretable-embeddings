@@ -9,7 +9,7 @@ from .arch import Model
 from src import const
 
 
-def fit(model, optimizer, loss, dataloader):
+def fit(model, optimizer, scheduler, loss, dataloader):
     if const.LOG_REMOTE: mlflow.set_tracking_uri(const.MLFLOW_TRACKING_URI)
     with mlflow.start_run():
         # log hyperparameters
@@ -49,6 +49,10 @@ if __name__ == '__main__':
     model = Model().to(const.DEVICE)
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=const.LEARNING_RATE)
+    scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer,
+                                                  cycle_momentum=False,
+                                                  base_lr=const.LR_BOUNDS[0],
+                                                  max_lr=const.LR_BOUNDS[1])
 
-    fit(model, optimizer, torch.nn.MSELoss(), dataloader)
+    fit(model, optimizer, scheduler, torch.nn.MSELoss(), dataloader)
     torch.save(model.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}.pt')

@@ -11,10 +11,11 @@ FEATURES_DIR = DATA_DIR / 'expression' / '634da99d771a5b05d92a59cf'
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 MODEL_NAME = 'default'
 LEARNING_RATE = 1E-3
+LR_BOUNDS = [1E-4, 1E-1]
 N_FEATURES = 29066
-HIDDEN_SIZE = 512
+HIDDEN_SIZE = 768
 BATCH_SIZE = 1024
-EPOCHS = 10
+EPOCHS = 50
 DEPTH = 5
 
 # logging
