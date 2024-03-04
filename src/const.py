@@ -11,6 +11,7 @@ DATA_DIR = BASE_DIR / 'data'
 FEATURES_DIR = DATA_DIR / 'expression' / '634da99d771a5b05d92a59cf'
 
 # data
+STRATIFY_AGAINST = ['disease', 'library_preparation_protocol', 'sex']
 SPLITS = ['train', 'valid', 'test']
 SPLIT_WEIGHTS = [0.7, 0.05, 0.25]
 N_FEATURES = 29066
