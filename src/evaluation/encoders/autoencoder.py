@@ -16,4 +16,4 @@ class AutoEncoder(BaseEncoder):
 
     def encode(self, batch):
         with torch.no_grad():
-            return self.model(batch)[1]
+            return self.model(batch.to(const.DEVICE))[1]

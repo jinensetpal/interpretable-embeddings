@@ -47,7 +47,7 @@ def evaluate(classifier, encoder):
     n_corr = 0
     for X, y in dataloader:
         with torch.no_grad():
-            n_corr += (classifier(encoder.encode(X)) == y).sum()
+            n_corr += (classifier(encoder.encode(X.to(const.DEVICE))) == y.to(const.DEVICE)).sum()
 
     print(f'Accuracy: {n_corr/len(dataloader.dataset)*100}%')
 
@@ -68,4 +68,5 @@ if __name__ == '__main__':
     fit(classifier, encoder, optimizer, scheduler, nn.BCELoss(), dataloader)
 
     classifier.eval()
+    torch.save(classifier.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}_cls_head.pt')
     evaluate(classifier, encoder)
