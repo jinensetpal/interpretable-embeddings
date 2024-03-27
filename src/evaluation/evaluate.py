@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
+from torch import nn
 import mlflow
 import torch
-import sys
 
-from ..data import Dataset
-from .arch import Model
+from src.evaluation.encoders.autoencoder import AutoEncoder
+from src.data import Dataset
 from src import const
 
 
-def fit(model, optimizer, scheduler, loss, dataloader):
+def fit(model, encoder, optimizer, scheduler, loss, dataloader):
     if const.LOG_REMOTE: mlflow.set_tracking_uri(const.MLFLOW_TRACKING_URI)
     with mlflow.start_run():
         # log hyperparameters
@@ -21,18 +21,18 @@ def fit(model, optimizer, scheduler, loss, dataloader):
             if not (epoch+1) % interval: print('-' * 10)
             epoch_loss = torch.empty(1)
 
-            for X, _ in dataloader:
+            for X, y in dataloader:
                 optimizer.zero_grad()
 
-                X = X.to(const.DEVICE)
-                recon, enc = model(X)
+                X, y = X.to(const.DEVICE), y.to(const.DEVICE)
+                y_pred = model(encoder.encode(X))
 
-                batch_loss = loss(recon, X)
+                batch_loss = loss(y_pred, y.unsqueeze(1))
                 batch_loss.backward()
                 optimizer.step()
 
                 epoch_loss = torch.vstack([epoch_loss.to(const.DEVICE), batch_loss])
-            metrics = {'mse_loss': epoch_loss[1:].mean().item()}
+            metrics = {'bce_loss': epoch_loss[1:].mean().item()}
             mlflow.log_metrics(metrics, step=epoch)
             if not (epoch+1) % interval:
                 print(f'epoch\t\t\t: {epoch+1}')
@@ -40,19 +40,32 @@ def fit(model, optimizer, scheduler, loss, dataloader):
         print('-' * 10)
 
 
-if __name__ == '__main__':
-    const.MODEL_NAME = sys.argv[1] if len(sys.argv) > 1 else const.MODEL_NAME
+def evaluate(classifier, encoder):
+    dataloader = torch.utils.data.DataLoader(Dataset('test'),
+                                             batch_size=const.BATCH_SIZE)
 
+    n_corr = 0
+    for X, y in dataloader:
+        with torch.no_grad():
+            n_corr += (classifier(encoder.encode(X)) == y).sum()
+
+    print(f'Accuracy: {n_corr/len(dataloader.dataset)*100}%')
+
+
+if __name__ == '__main__':
     dataloader = torch.utils.data.DataLoader(Dataset('train'),
                                              batch_size=const.BATCH_SIZE,
                                              shuffle=True)
-    model = Model().to(const.DEVICE)
-    optimizer = torch.optim.Adam(model.parameters(),
+    encoder = AutoEncoder()  # change this!
+    classifier = nn.Sequential(nn.Linear(768, 1),
+                               nn.Sigmoid()).to(const.DEVICE)
+    optimizer = torch.optim.Adam(classifier.parameters(),
                                  lr=const.LEARNING_RATE)
     scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer,
                                                   cycle_momentum=False,
                                                   base_lr=const.LR_BOUNDS[0],
                                                   max_lr=const.LR_BOUNDS[1])
+    fit(classifier, encoder, optimizer, scheduler, nn.BCELoss(), dataloader)
 
-    fit(model, optimizer, scheduler, torch.nn.MSELoss(), dataloader)
-    torch.save(model.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}.pt')
+    classifier.eval()
+    evaluate(classifier, encoder)
