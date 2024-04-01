@@ -47,7 +47,7 @@ def evaluate(classifier, encoder):
     n_corr = 0
     for X, y in dataloader:
         with torch.no_grad():
-            n_corr += (classifier(encoder.encode(X.to(const.DEVICE))) == y.to(const.DEVICE)).sum()
+            n_corr += ((classifier(encoder.encode(X.to(const.DEVICE))) > 0.5).to(torch.int) == y.to(const.DEVICE)).sum()
 
     print(f'Accuracy: {n_corr/len(dataloader.dataset)*100}%')
 
