@@ -13,11 +13,6 @@ class PCA(BaseEncoder):
         with open('pca.pickle', 'rb') as f:
             pca = pickle.load(f)
         self.model = pca
-        # self.model = Model().to(const.DEVICE)
-        # self.model.load_state_dict(torch.load(const.MODEL_DIR / f'{model_name}.pt',
-        #                                       map_location=const.DEVICE))
-        # self.model.eval()
 
     def encode(self, batch):
-        with torch.no_grad():
-            return self.model(batch)[1]
+        #batch wise transform sing pca
