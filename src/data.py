@@ -30,4 +30,4 @@ class Dataset(torch.utils.data.Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return torch.tensor(self.data.iloc[idx].tolist()), torch.tensor(float(self.metadata.iloc[idx]['disease'] == 'MONDO_0018874'))
+        return torch.tensor(self.data.iloc[idx].tolist()), torch.tensor(float(self.metadata.iloc[idx]['disease'] == 'MONDO_0018874')).unsqueeze(0)
