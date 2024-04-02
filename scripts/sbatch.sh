@@ -6,8 +6,10 @@
 #SBATCH --time=3:30:00
 
 module load cuda cudnn anaconda
-source activate .venv
+source activate ibm
 
-cd ~/interpretable-embeddings
+cd ~/git/interpretable-embeddings
 
-python -m src.evaluate.py 
+MLFLOW_TRACKING_USERNAME=jinensetpal \
+MLFLOW_TRACKING_PASSWORD=$MLFLOW_TOKEN \
+python -m src.model.train $MODEL_NAME
