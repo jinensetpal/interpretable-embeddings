@@ -5,7 +5,6 @@ from .base import BaseEncoder
 from src import const
 import scanpy as sc
 
-
 class DiffMap(BaseEncoder):
     def __init__(self):
         super().__init__()

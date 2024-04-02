@@ -7,6 +7,7 @@ import torch
 from src.evaluation.encoders.autoencoder import AutoEncoder
 from src.data import Dataset
 from src import const
+from src.evaluation.encoders.diffmap import DiffMap
 
 
 def fit(model, encoder, optimizer, scheduler, loss, dataloader):
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     dataloader = torch.utils.data.DataLoader(Dataset('train'),
                                              batch_size=const.BATCH_SIZE,
                                              shuffle=True)
-    encoder = AutoEncoder()  # change this!
+    encoder = DiffMap()  # change this!
     classifier = nn.Sequential(nn.Linear(768, 1),
                                nn.Sigmoid()).to(const.DEVICE)
     optimizer = torch.optim.Adam(classifier.parameters(),
@@ -66,7 +67,6 @@ if __name__ == '__main__':
                                                   base_lr=const.LR_BOUNDS[0],
                                                   max_lr=const.LR_BOUNDS[1])
     fit(classifier, encoder, optimizer, scheduler, nn.BCELoss(), dataloader)
-
     classifier.eval()
     torch.save(classifier.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}_cls_head.pt')
     evaluate(classifier, encoder)
