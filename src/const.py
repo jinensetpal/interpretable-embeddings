@@ -22,6 +22,7 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 LR_BOUNDS = [1E-4, 1E-1]
 MODEL_NAME = 'default'
 LEARNING_RATE = 1E-3
+UMAP_NEIGHBORS = 40
 HIDDEN_SIZE = 768
 BATCH_SIZE = 1024
 EPOCHS = 50

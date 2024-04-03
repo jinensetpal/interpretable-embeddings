@@ -27,7 +27,7 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloader):
                 X, y = X.to(const.DEVICE), y.to(const.DEVICE)
                 y_pred = model(encoder.encode(X))
 
-                batch_loss = loss(y_pred, y.unsqueeze(1))
+                batch_loss = loss(y_pred, y)
                 batch_loss.backward()
                 optimizer.step()
 
