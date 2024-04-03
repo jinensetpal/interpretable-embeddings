@@ -6,8 +6,8 @@
 #SBATCH --time=3:30:00
 
 module load cuda cudnn anaconda
-source activate .venv
+source activate dhruv
 
-cd ~/git/interpretable-embeddings
+cd ~/interpretable-embeddings
 
-python -m src.evaluate.py
+python -m src.evaluatation.evaluate
