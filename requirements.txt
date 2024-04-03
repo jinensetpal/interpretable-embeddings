@@ -5,3 +5,4 @@ torch==2.2.0
 dvc-s3==3.0.1
 dvc==3.48.1
 umap-learn==0.5.5
+scikit-learn==1.4.0
