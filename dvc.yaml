@@ -1,0 +1,21 @@
+stages:
+  train:
+    cmd: python -m src.model.train
+    deps:
+    - data
+    - src/const.py
+    - src/model/arch.py
+    - src/model/train.py
+    outs:
+    - models/default.pt
+  evaluate:
+    cmd: python -m src.model.train
+    deps:
+    - data
+    - models/default.pt
+    - src/const.py
+    - src/evaluation/encoders/autoencoder.py
+    - src/evaluation/evaluate.py
+    - src/model/arch.py
+    outs:
+    - models/default_cls_head.pt

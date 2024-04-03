@@ -1,0 +1,60 @@
+schema: '2.0'
+stages:
+  train:
+    cmd: python -m src.model.train
+    deps:
+    - path: data
+      hash: md5
+      md5: 799ebd4ef2558dfbd389f72b7a7eef99.dir
+      size: 10359324098
+      nfiles: 16
+    - path: src/const.py
+      hash: md5
+      md5: d824e272de3735273a0ddf17060b7e00
+      size: 762
+    - path: src/model/arch.py
+      hash: md5
+      md5: 2a4067fc1f0ed213bec9012e8884cec5
+      size: 855
+    - path: src/model/train.py
+      hash: md5
+      md5: 3783832ac92062016820c5a12414f9c2
+      size: 2244
+    outs:
+    - path: models/default.pt
+      hash: md5
+      md5: 23da165e70cbf92187bfa1e5ff32fd53
+      size: 4499564366
+  evaluate:
+    cmd: python -m src.model.train
+    deps:
+    - path: data
+      hash: md5
+      md5: 799ebd4ef2558dfbd389f72b7a7eef99.dir
+      size: 10359324098
+      nfiles: 16
+    - path: models/default.pt
+      hash: md5
+      md5: 23da165e70cbf92187bfa1e5ff32fd53
+      size: 4499564366
+    - path: src/const.py
+      hash: md5
+      md5: d824e272de3735273a0ddf17060b7e00
+      size: 762
+    - path: src/evaluation/encoders/autoencoder.py
+      hash: md5
+      md5: 7df0eba317035013fff26b5b1c9957c1
+      size: 557
+    - path: src/evaluation/evaluate.py
+      hash: md5
+      md5: 6cd7cc9bc5ba21cfb6a0894c845deac7
+      size: 2904
+    - path: src/model/arch.py
+      hash: md5
+      md5: 2a4067fc1f0ed213bec9012e8884cec5
+      size: 855
+    outs:
+    - path: models/default_cls_head.pt
+      hash: md5
+      md5: 1e251f5ea51a8893365f554c12234550
+      size: 4686
