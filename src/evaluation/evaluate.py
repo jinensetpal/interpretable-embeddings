@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from itertools import chain
 from torch import nn
 import mlflow
 import torch
@@ -9,7 +10,12 @@ from src.data import Dataset
 from src import const
 
 
-def fit(model, encoder, optimizer, scheduler, loss, dataloader):
+def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
+    best = {'epoch': -1,
+            'parameters': model.state_dict(),
+            'loss': torch.inf}
+
+    if const.ONLINE: mse = torch.nn.MSELoss()
     if const.LOG_REMOTE: mlflow.set_tracking_uri(const.MLFLOW_TRACKING_URI)
     with mlflow.start_run():
         # log hyperparameters
@@ -19,24 +25,53 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloader):
         interval = max(1, (const.EPOCHS // 10))
         for epoch in range(const.EPOCHS):
             if not (epoch+1) % interval: print('-' * 10)
-            epoch_loss = torch.empty(1)
+            bce_train_loss = torch.empty(1)
+            mse_train_loss = torch.empty(1)
+            bce_valid_loss = torch.empty(1)
+            mse_valid_loss = torch.empty(1)
 
-            for X, y in dataloader:
+            for (X_train, y_train), (X_valid, y_valid) in zip(*dataloaders):
                 optimizer.zero_grad()
 
-                X, y = X.to(const.DEVICE), y.to(const.DEVICE)
-                y_pred = model(encoder.encode(X))
+                X_train, y_train, X_valid, y_valid = [x.to(const.DEVICE) for x in (X_train, y_train, X_valid, y_valid)]
+                if const.ONLINE:
+                    recon_train, enc = encoder.encode(X_train)
+                    y_pred_train = model(enc)
+                    recon_valid, enc = encoder.encode(X_valid)
+                    y_pred_valid = model(enc)
+                else:
+                    y_pred_train = model(encoder.encode(X_train))
+                    y_pred_valid = model(encoder.encode(X_valid))
 
-                batch_loss = loss(y_pred, y.unsqueeze(1))
-                batch_loss.backward()
+                bce_loss_train = loss(y_pred_train, y_train)
+                bce_loss_valid = loss(y_pred_valid, y_valid)
+                if const.ONLINE:
+                    mse_loss_train = mse(recon_train, X_train)
+                    mse_loss_valid = mse(recon_valid, X_valid)
+                    (bce_loss_train + mse_loss_train).backward()
+                else: bce_loss_train.backward()
                 optimizer.step()
 
-                epoch_loss = torch.vstack([epoch_loss.to(const.DEVICE), batch_loss])
-            metrics = {'bce_loss': epoch_loss[1:].mean().item()}
+                bce_train_loss = torch.vstack([bce_train_loss.to(const.DEVICE), bce_loss_train])
+                bce_valid_loss = torch.vstack([bce_valid_loss.to(const.DEVICE), bce_loss_valid])
+                if const.ONLINE:
+                    mse_train_loss = torch.vstack([mse_train_loss.to(const.DEVICE), mse_loss_train])
+                    mse_valid_loss = torch.vstack([mse_valid_loss.to(const.DEVICE), mse_loss_valid])
+            metrics = {'bce_train_loss': bce_train_loss[1:].mean().item(),
+                       'bce_valid_loss': bce_valid_loss[1:].mean().item()}
+            if const.ONLINE: metrics.update({'mse_train_loss': mse_train_loss[1:].mean().item(),
+                                             'mse_valid_loss': mse_valid_loss[1:].mean().item()})
             mlflow.log_metrics(metrics, step=epoch)
             if not (epoch+1) % interval:
                 print(f'epoch\t\t\t: {epoch+1}')
                 for key in metrics: print(f'{key}\t\t: {metrics[key]}')
+
+            if best['loss'] > metrics['bce_valid_loss']:
+                best = {'loss': metrics['bce_valid_loss'],
+                        'parameters': model.state_dict(),
+                        'epoch': epoch + 1}
+        model.load_state_dict(best['parameters'])
+        mlflow.log_param('selected_epoch', best['epoch'])
         print('-' * 10)
 
 
@@ -53,20 +88,19 @@ def evaluate(classifier, encoder):
 
 
 if __name__ == '__main__':
-    dataloader = torch.utils.data.DataLoader(Dataset('train'),
-                                             batch_size=const.BATCH_SIZE,
-                                             shuffle=True)
-    encoder = AutoEncoder()  # change this!
-    classifier = nn.Sequential(nn.Linear(768, 1),
+    dataloaders = [torch.utils.data.DataLoader(Dataset(split), batch_size=const.BATCH_SIZE,
+                                               shuffle=True) for split in ['train', 'valid']]
+    encoder = AutoEncoder(train=const.ONLINE)
+    classifier = nn.Sequential(nn.Linear(const.HIDDEN_SIZE, 1),
                                nn.Sigmoid()).to(const.DEVICE)
-    optimizer = torch.optim.Adam(classifier.parameters(),
+    optimizer = torch.optim.Adam(chain(encoder.model.parameters(), classifier.parameters()) if const.ONLINE else classifier.parameters(),
                                  lr=const.LEARNING_RATE)
     scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer,
                                                   cycle_momentum=False,
                                                   base_lr=const.LR_BOUNDS[0],
                                                   max_lr=const.LR_BOUNDS[1])
-    fit(classifier, encoder, optimizer, scheduler, nn.BCELoss(), dataloader)
+    fit(classifier, encoder, optimizer, scheduler, nn.BCELoss(), dataloaders)
 
-    classifier.eval()
-    torch.save(classifier.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}_cls_head.pt')
-    evaluate(classifier, encoder)
+    # classifier.eval()
+    # torch.save(classifier.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}_cls_head.pt')
+    # evaluate(classifier, encoder)
