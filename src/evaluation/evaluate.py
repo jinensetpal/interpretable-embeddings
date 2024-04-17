@@ -4,7 +4,7 @@ from torch import nn
 import mlflow
 import torch
 
-from src.evaluation.encoders.autoencoder import AutoEncoder
+from src.evaluation.encoders.umap import UMAPEncoder
 from src.data import Dataset
 from src import const
 
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     dataloader = torch.utils.data.DataLoader(Dataset('train'),
                                              batch_size=const.BATCH_SIZE,
                                              shuffle=True)
-    encoder = AutoEncoder()  # change this!
+    encoder = UMAPEncoder()  # change this!
     classifier = nn.Sequential(nn.Linear(768, 1),
                                nn.Sigmoid()).to(const.DEVICE)
     optimizer = torch.optim.Adam(classifier.parameters(),
