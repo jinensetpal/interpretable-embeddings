@@ -44,7 +44,6 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloader):
 def evaluate(classifier, encoder):
     dataloader = torch.utils.data.DataLoader(Dataset('test'),
                                              batch_size=const.BATCH_SIZE)
-
     n_corr = 0
     for X, y in dataloader:
         with torch.no_grad():
@@ -58,7 +57,7 @@ if __name__ == '__main__':
                                              batch_size=const.BATCH_SIZE,
                                              shuffle=True)
     encoder = DiffMap()  # change this!
-    classifier = nn.Sequential(nn.Linear(768, 1),
+    classifier = nn.Sequential(nn.Linear(100, 1),
                                nn.Sigmoid()).to(const.DEVICE)
     optimizer = torch.optim.Adam(classifier.parameters(),
                                  lr=const.LEARNING_RATE)

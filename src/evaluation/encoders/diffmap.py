@@ -4,6 +4,7 @@ from src.model.arch import Model
 from .base import BaseEncoder
 from src import const
 import scanpy as sc
+import anndata as ad
 
 
 class DiffMap(BaseEncoder):
@@ -11,6 +12,8 @@ class DiffMap(BaseEncoder):
         super().__init__()
 
     def encode(self, batch):
-        sc.pp.neighbors(batch, 50)
-        res = sc.tl.diffmap(batch, 50, copy=True)
-        return torch.tensor(res.obsm["X_diffmap"][:, 1]).to(const.DEVICE)
+        df = ad.AnnData(batch.cpu().numpy())
+        sc.pp.neighbors(df, n_neighbors=50, n_pcs = 101, use_rep = 'X')
+        sc.tl.diffmap(df, n_comps = 101)
+        sliced = df.obsm["X_diffmap"][:, 1:].copy()
+        return (torch.tensor(sliced).unsqueeze(dim=1)).to(const.DEVICE)
