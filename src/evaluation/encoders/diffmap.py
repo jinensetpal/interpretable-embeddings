@@ -13,7 +13,7 @@ class DiffMap(BaseEncoder):
 
     def encode(self, batch):
         df = ad.AnnData(batch.cpu().numpy())
-        sc.pp.neighbors(df, n_neighbors=50, n_pcs = 101, use_rep = 'X')
-        sc.tl.diffmap(df, n_comps = 101)
+        sc.pp.neighbors(df, n_neighbors=25, n_pcs = const.HIDDEN_SIZE+1, use_rep = 'X')
+        sc.tl.diffmap(df, n_comps = const.HIDDEN_SIZE+1)
         sliced = df.obsm["X_diffmap"][:, 1:].copy()
         return (torch.tensor(sliced).unsqueeze(dim=1)).to(const.DEVICE)

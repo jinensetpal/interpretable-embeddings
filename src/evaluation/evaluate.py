@@ -49,6 +49,7 @@ def evaluate(classifier, encoder):
         with torch.no_grad():
             n_corr += ((classifier(encoder.encode(X.to(const.DEVICE))) > 0.5).to(torch.int) == y.to(const.DEVICE)).sum()
 
+    print(f'Enoder Size:' const.HIDDEN_SIZE)
     print(f'Accuracy: {n_corr/len(dataloader.dataset)*100}%')
 
 
@@ -57,7 +58,7 @@ if __name__ == '__main__':
                                              batch_size=const.BATCH_SIZE,
                                              shuffle=True)
     encoder = DiffMap()  # change this!
-    classifier = nn.Sequential(nn.Linear(100, 1),
+    classifier = nn.Sequential(nn.Linear(const.HIDDEN_SIZE, 1),
                                nn.Sigmoid()).to(const.DEVICE)
     optimizer = torch.optim.Adam(classifier.parameters(),
                                  lr=const.LEARNING_RATE)
