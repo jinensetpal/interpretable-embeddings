@@ -70,6 +70,7 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
                 best = {'loss': metrics['bce_valid_loss'],
                         'parameters': model.state_dict(),
                         'epoch': epoch + 1}
+            elif (epoch + 1 - best['epoch']) > const.EARLY_STOPPING_THRESHOLD: break
         model.load_state_dict(best['parameters'])
         mlflow.log_param('selected_epoch', best['epoch'])
         print('-' * 10)
@@ -101,6 +102,6 @@ if __name__ == '__main__':
                                                   max_lr=const.LR_BOUNDS[1])
     fit(classifier, encoder, optimizer, scheduler, nn.BCELoss(), dataloaders)
 
-    # classifier.eval()
-    # torch.save(classifier.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}_cls_head.pt')
-    # evaluate(classifier, encoder)
+    classifier.eval()
+    torch.save(classifier.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}_cls_head.pt')
+    evaluate(classifier, encoder)

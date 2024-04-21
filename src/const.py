@@ -19,6 +19,7 @@ SEED = 10
 
 # training
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+EARLY_STOPPING_THRESHOLD = 5
 LR_BOUNDS = [1E-4, 1E-1]
 MODEL_NAME = 'default'
 LEARNING_RATE = 1E-3
