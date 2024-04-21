@@ -12,9 +12,11 @@ class AutoEncoder(BaseEncoder):
     def __init__(self, model_name=const.MODEL_NAME, train=False):
         if model_name.startswith('vae'): self.model = VAE().to(const.DEVICE)
         else: self.model = AE().to(const.DEVICE)
-        self.model.load_state_dict(torch.load(const.MODEL_DIR / f'{model_name}.pt',
-                                              map_location=const.DEVICE))
-        if not train: self.model.eval()
+
+        if not train:
+            self.model.load_state_dict(torch.load(const.MODEL_DIR / f'{model_name}.pt',
+                                                  map_location=const.DEVICE))
+            self.model.eval()
         self.grad = train
 
     def encode(self, batch):

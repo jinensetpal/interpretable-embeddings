@@ -2,10 +2,9 @@
 
 from src import const
 from torch import nn
-import torch
 
 
-class Model(torch.nn.Module):
+class Model(nn.Module):
     def __init__(self):
         super().__init__()
         self.name = const.MODEL_NAME

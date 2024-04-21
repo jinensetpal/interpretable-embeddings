@@ -37,11 +37,12 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
                 if const.ONLINE:
                     recon_train, enc = encoder.encode(X_train)
                     y_pred_train = model(enc)
-                    recon_valid, enc = encoder.encode(X_valid)
-                    y_pred_valid = model(enc)
+                    with torch.no_grad():
+                        recon_valid, enc = encoder.encode(X_valid)
+                        y_pred_valid = model(enc)
                 else:
                     y_pred_train = model(encoder.encode(X_train))
-                    y_pred_valid = model(encoder.encode(X_valid))
+                    with torch.no_grad(): y_pred_valid = model(encoder.encode(X_valid))
 
                 bce_loss_train = loss(y_pred_train, y_train)
                 bce_loss_valid = loss(y_pred_valid, y_valid)
@@ -77,8 +78,7 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
 
 
 def evaluate(classifier, encoder):
-    dataloader = torch.utils.data.DataLoader(Dataset('test'),
-                                             batch_size=const.BATCH_SIZE)
+    dataloader = torch.utils.data.DataLoader(Dataset('test'), batch_size=const.BATCH_SIZE)
 
     n_corr = 0
     for X, y in dataloader:
@@ -103,5 +103,8 @@ if __name__ == '__main__':
     fit(classifier, encoder, optimizer, scheduler, nn.BCELoss(), dataloaders)
 
     classifier.eval()
+    if const.ONLINE:
+        encoder.model.eval()
+        torch.save(encoder.model.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}_cls_head.pt')
     torch.save(classifier.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}_cls_head.pt')
     evaluate(classifier, encoder)
