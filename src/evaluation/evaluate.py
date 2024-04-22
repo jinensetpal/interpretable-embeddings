@@ -6,6 +6,7 @@ import mlflow
 import torch
 
 from src.evaluation.encoders.autoencoder import AutoEncoder
+from src.model.loss import VAELoss
 from src.data import Dataset
 from src import const
 
@@ -15,7 +16,11 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
             'parameters': model.state_dict(),
             'loss': torch.inf}
 
-    if const.ONLINE: mse = torch.nn.MSELoss()
+    if const.ONLINE:
+        is_ae = const.MODEL_NAME.startswith('ae')
+        aux_loss = torch.nn.MSELoss() if is_ae else VAELoss()
+        lossname = 'mse' if is_ae else 'vae'
+
     if const.LOG_REMOTE: mlflow.set_tracking_uri(const.MLFLOW_TRACKING_URI)
     with mlflow.start_run():
         # log hyperparameters
@@ -26,9 +31,9 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
         for epoch in range(const.EPOCHS):
             if not (epoch+1) % interval: print('-' * 10)
             bce_train_loss = torch.empty(1)
-            mse_train_loss = torch.empty(1)
+            aux_train_loss = torch.empty(1)
             bce_valid_loss = torch.empty(1)
-            mse_valid_loss = torch.empty(1)
+            aux_valid_loss = torch.empty(1)
 
             for (X_train, y_train), (X_valid, y_valid) in zip(*dataloaders):
                 optimizer.zero_grad()
@@ -47,21 +52,21 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
                 bce_loss_train = loss(y_pred_train, y_train)
                 bce_loss_valid = loss(y_pred_valid, y_valid)
                 if const.ONLINE:
-                    mse_loss_train = mse(recon_train, X_train)
-                    mse_loss_valid = mse(recon_valid, X_valid)
-                    (bce_loss_train + mse_loss_train).backward()
+                    aux_loss_train = aux_loss(recon_train, X_train)
+                    aux_loss_valid = aux_loss(recon_valid, X_valid)
+                    (bce_loss_train + aux_loss_train).backward()
                 else: bce_loss_train.backward()
                 optimizer.step()
 
                 bce_train_loss = torch.vstack([bce_train_loss.to(const.DEVICE), bce_loss_train])
                 bce_valid_loss = torch.vstack([bce_valid_loss.to(const.DEVICE), bce_loss_valid])
                 if const.ONLINE:
-                    mse_train_loss = torch.vstack([mse_train_loss.to(const.DEVICE), mse_loss_train])
-                    mse_valid_loss = torch.vstack([mse_valid_loss.to(const.DEVICE), mse_loss_valid])
+                    aux_train_loss = torch.vstack([aux_train_loss.to(const.DEVICE), aux_loss_train])
+                    aux_valid_loss = torch.vstack([aux_valid_loss.to(const.DEVICE), aux_loss_valid])
             metrics = {'bce_train_loss': bce_train_loss[1:].mean().item(),
                        'bce_valid_loss': bce_valid_loss[1:].mean().item()}
-            if const.ONLINE: metrics.update({'mse_train_loss': mse_train_loss[1:].mean().item(),
-                                             'mse_valid_loss': mse_valid_loss[1:].mean().item()})
+            if const.ONLINE: metrics.update({f'{lossname}_train_loss': aux_train_loss[1:].mean().item(),
+                                             f'{lossname}_valid_loss': aux_valid_loss[1:].mean().item()})
             mlflow.log_metrics(metrics, step=epoch)
             if not (epoch+1) % interval:
                 print(f'epoch\t\t\t: {epoch+1}')
@@ -105,6 +110,6 @@ if __name__ == '__main__':
     classifier.eval()
     if const.ONLINE:
         encoder.model.eval()
-        torch.save(encoder.model.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}_cls_head.pt')
+        torch.save(encoder.model.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}.pt')
     torch.save(classifier.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}_cls_head.pt')
     evaluate(classifier, encoder)

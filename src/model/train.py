@@ -15,6 +15,7 @@ def fit(model, optimizer, scheduler, loss, dataloaders, is_ae):
     best = {'epoch': -1,
             'parameters': model.state_dict(),
             'loss': torch.inf}
+    loss_name = 'mse' if is_ae else 'vae'
 
     if const.LOG_REMOTE: mlflow.set_tracking_uri(const.MLFLOW_TRACKING_URI)
     with mlflow.start_run():
@@ -39,24 +40,22 @@ def fit(model, optimizer, scheduler, loss, dataloaders, is_ae):
                     ae_loss_train = loss(recon_train, X_train)
                     ae_loss_valid = loss(recon_valid, X_valid)
                 else:
-                    ae_loss_train = loss(*recon_train, X_train)
-                    ae_loss_valid = loss(*recon_valid, X_valid)
+                    ae_loss_train = loss(recon_train, X_train)
+                    ae_loss_valid = loss(recon_valid, X_valid)
                 ae_loss_train.backward()
                 optimizer.step()
 
                 ae_train_loss = torch.vstack([ae_train_loss.to(const.DEVICE), ae_loss_train])
                 ae_valid_loss = torch.vstack([ae_valid_loss.to(const.DEVICE), ae_loss_valid])
-            if is_ae: metrics = {'mse_train_loss': ae_train_loss[1:].mean().item(),
-                                 'mse_valid_loss': ae_valid_loss[1:].mean().item()}
-            else: metrics = {'vae_train_loss': ae_train_loss[1:].mean().item(),
-                             'vae_valid_loss': ae_valid_loss[1:].mean().item()}
+            metrics = {f'{loss_name}_train_loss': ae_train_loss[1:].mean().item(),
+                       f'{loss_name}_valid_loss': ae_valid_loss[1:].mean().item()}
             mlflow.log_metrics(metrics, step=epoch)
             if not (epoch+1) % interval:
                 print(f'epoch\t\t\t: {epoch+1}')
                 for key in metrics: print(f'{key}\t\t: {metrics[key]}')
 
-            if best['loss'] > metrics['ae_valid_loss']:
-                best = {'loss': metrics['ae_valid_loss'],
+            if best['loss'] > metrics[f'{loss_name}_valid_loss']:
+                best = {'loss': metrics[f'{loss_name}_valid_loss'],
                         'parameters': model.state_dict(),
                         'epoch': epoch + 1}
             elif (epoch + 1 - best['epoch']) > const.EARLY_STOPPING_THRESHOLD: break

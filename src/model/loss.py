@@ -14,6 +14,7 @@ class VAELoss(nn.Module):
         self.mse = nn.MSELoss()
         self.alpha = const.KLD_ALPHA
 
-    def forward(self, recon, mean, std_dev, X):
+    def forward(self, recon, X):
+        recon, mean, std_dev = recon
         var = std_dev.pow(2)
         return self.mse(recon, X) - self.alpha * torch.sum(1 + torch.log(var) - mean.pow(2) + var)
