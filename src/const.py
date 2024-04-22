@@ -19,16 +19,19 @@ SEED = 10
 
 # training
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+EARLY_STOPPING_THRESHOLD = 5
 LR_BOUNDS = [1E-4, 1E-1]
 MODEL_NAME = 'default'
 LEARNING_RATE = 1E-3
 HIDDEN_SIZE = 768
 BATCH_SIZE = 1024
+KLD_ALPHA = .5
+ONLINE = False
 EPOCHS = 50
 DEPTH = 5
 
 # logging
 MLFLOW_TRACKING_URI = 'https://dagshub.com/jinensetpal/interpretable-embeddings.mlflow'
-LOG_REMOTE = True
+LOG_REMOTE = False
 
 random.seed(SEED)
