@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
+from sklearn.preprocessing import StandardScaler
 from itertools import product
 import scanpy as sc
 import pandas as pd
 import random
+import pickle
 import torch
 
 from src import const
@@ -31,3 +33,15 @@ class Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         return torch.tensor(self.data.iloc[idx].tolist()), torch.tensor(float(self.metadata.iloc[idx]['disease'] == 'MONDO_0018874')).unsqueeze(0)
+
+
+def save_std_scaler():
+    ds = Dataset('train')
+    scaler = StandardScaler()
+    scaler.fit(ds.data)
+
+    pickle.dump(scaler, open(const.MODEL_DIR / 'scaler.pkl', 'wb'))
+
+
+if __name__ == '__main__':
+    save_std_scaler()

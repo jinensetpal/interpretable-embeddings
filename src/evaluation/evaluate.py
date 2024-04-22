@@ -6,6 +6,7 @@ import mlflow
 import torch
 
 from src.evaluation.encoders.autoencoder import AutoEncoder
+from src.evaluation.encoders.umap import UMAPEncoder
 from src.model.loss import VAELoss
 from src.data import Dataset
 from src import const
