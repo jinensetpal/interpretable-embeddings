@@ -57,7 +57,7 @@ if __name__ == '__main__':
     dataloader = torch.utils.data.DataLoader(Dataset('train'),
                                              batch_size=const.BATCH_SIZE,
                                              shuffle=True)
-    encoder = DiffMap()  # change this!
+    encoder = DiffMap() 
     classifier = nn.Sequential(nn.Linear(const.HIDDEN_SIZE, 1),
                                nn.Sigmoid()).to(const.DEVICE)
     optimizer = torch.optim.Adam(classifier.parameters(),

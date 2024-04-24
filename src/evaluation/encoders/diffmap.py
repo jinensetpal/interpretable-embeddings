@@ -10,7 +10,6 @@ import anndata as ad
 class DiffMap(BaseEncoder):
     def __init__(self):
         super().__init__()
-
     def encode(self, batch):
         df = ad.AnnData(batch.cpu().numpy())
         sc.pp.neighbors(df, n_neighbors=25, n_pcs = const.HIDDEN_SIZE+1, use_rep = 'X')
