@@ -49,7 +49,7 @@ def evaluate(classifier, encoder):
         with torch.no_grad():
             n_corr += ((classifier(encoder.encode(X.to(const.DEVICE))) > 0.5).to(torch.int) == y.to(const.DEVICE)).sum()
 
-    print(f'Enoder Size:' const.HIDDEN_SIZE)
+    print(f'Encoder Size: {const.HIDDEN_SIZE}%')
     print(f'Accuracy: {n_corr/len(dataloader.dataset)*100}%')
 
 
