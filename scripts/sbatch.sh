@@ -8,9 +8,9 @@
 #SBATCH --constraint=V100_32GB
 #SBATCH --time=3:30:00
 
-module load cuda cudnn anaconda/2020.11-py38
+module load cuda cudnn anaconda
 source activate dhruv
 
 cd ~/interpretable-embeddings
 
-python -m src.evaluation.evaluate
+python -m src.evaluatation.evaluate
