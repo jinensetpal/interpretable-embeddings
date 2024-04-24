@@ -19,7 +19,7 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
     if const.ONLINE:
         is_ae = const.MODEL_NAME.startswith('ae')
         aux_loss = torch.nn.MSELoss() if is_ae else VAELoss()
-        lossname = 'mse' if is_ae else 'vae'
+        loss_name = 'mse' if is_ae else 'vae'
 
     if const.LOG_REMOTE: mlflow.set_tracking_uri(const.MLFLOW_TRACKING_URI)
     with mlflow.start_run():
@@ -63,10 +63,12 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
                 if const.ONLINE:
                     aux_train_loss = torch.vstack([aux_train_loss.to(const.DEVICE), aux_loss_train])
                     aux_valid_loss = torch.vstack([aux_valid_loss.to(const.DEVICE), aux_loss_valid])
-            metrics = {'bce_train_loss': bce_train_loss[1:].mean().item(),
+            scheduler.step()
+            metrics = {'lr': optimizer.param_groups[0]['lr'],
+                       'bce_train_loss': bce_train_loss[1:].mean().item(),
                        'bce_valid_loss': bce_valid_loss[1:].mean().item()}
-            if const.ONLINE: metrics.update({f'{lossname}_train_loss': aux_train_loss[1:].mean().item(),
-                                             f'{lossname}_valid_loss': aux_valid_loss[1:].mean().item()})
+            if const.ONLINE: metrics.update({f'{loss_name}_train_loss': aux_train_loss[1:].mean().item(),
+                                             f'{loss_name}_valid_loss': aux_valid_loss[1:].mean().item()})
             mlflow.log_metrics(metrics, step=epoch)
             if not (epoch+1) % interval:
                 print(f'epoch\t\t\t: {epoch+1}')
@@ -76,7 +78,7 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
                 best = {'loss': metrics['bce_valid_loss'],
                         'parameters': model.state_dict(),
                         'epoch': epoch + 1}
-            elif (epoch + 1 - best['epoch']) > const.EARLY_STOPPING_THRESHOLD: break
+            elif epoch + 1 > const.MIN_EPOCHS and (epoch + 1 - best['epoch']) > const.EARLY_STOPPING_THRESHOLD: break
         model.load_state_dict(best['parameters'])
         mlflow.log_param('selected_epoch', best['epoch'])
         print('-' * 10)
