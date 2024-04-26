@@ -2,10 +2,9 @@
 
 from src import const
 from torch import nn
-import torch
 
 
-class Model(torch.nn.Module):
+class Model(nn.Module):
     def __init__(self):
         super().__init__()
         self.name = const.MODEL_NAME
@@ -13,20 +12,23 @@ class Model(torch.nn.Module):
         unit_scope = [const.N_FEATURES // 2 ** pw for pw in range(const.DEPTH)]
         self.downsamplers = nn.ModuleList([nn.LazyLinear(units) for units in unit_scope[1:]])
         self.upsamplers = nn.ModuleList([nn.LazyLinear(units) for units in unit_scope[::-1]])
+        self.relu = nn.ReLU()
 
         self.encoded = nn.LazyLinear(const.HIDDEN_SIZE)
 
     def forward(self, x):
         for downsampler in self.downsamplers:
             x = downsampler(x)
-
+            x = self.relu(x)
         enc = self.encoded(x)
-        x = enc
 
-        for upsampler in self.upsamplers:
-            x = upsampler(x)
-
-        return x, enc
+        if self.training:
+            x = enc
+            for upsampler in self.upsamplers:
+                x = upsampler(x)
+                x = self.relu(x)
+            return x, enc
+        else: return enc
 
 
 if __name__ == '__main__':
