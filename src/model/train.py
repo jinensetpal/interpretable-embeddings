@@ -36,18 +36,16 @@ def fit(model, optimizer, scheduler, loss, dataloaders, is_ae):
                 recon_train, enc = model(X_train)
                 with torch.no_grad(): recon_valid, enc = model(X_valid)
 
-                if is_ae:
-                    ae_loss_train = loss(recon_train, X_train)
-                    ae_loss_valid = loss(recon_valid, X_valid)
-                else:
-                    ae_loss_train = loss(recon_train, X_train)
-                    ae_loss_valid = loss(recon_valid, X_valid)
+                ae_loss_train = loss(recon_train, X_train)
+                ae_loss_valid = loss(recon_valid, X_valid)
                 ae_loss_train.backward()
                 optimizer.step()
 
                 ae_train_loss = torch.vstack([ae_train_loss.to(const.DEVICE), ae_loss_train])
                 ae_valid_loss = torch.vstack([ae_valid_loss.to(const.DEVICE), ae_loss_valid])
-            metrics = {f'{loss_name}_train_loss': ae_train_loss[1:].mean().item(),
+            scheduler.step()
+            metrics = {'lr': optimizer.param_groups[0]['lr'],
+                       f'{loss_name}_train_loss': ae_train_loss[1:].mean().item(),
                        f'{loss_name}_valid_loss': ae_valid_loss[1:].mean().item()}
             mlflow.log_metrics(metrics, step=epoch)
             if not (epoch+1) % interval:

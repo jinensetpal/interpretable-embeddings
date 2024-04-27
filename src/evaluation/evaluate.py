@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from torcheval.metrics.functional import binary_f1_score
 from itertools import chain
 from torch import nn
 import mlflow
@@ -20,7 +21,7 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
     if const.ONLINE:
         is_ae = const.MODEL_NAME.startswith('ae')
         aux_loss = torch.nn.MSELoss() if is_ae else VAELoss()
-        lossname = 'mse' if is_ae else 'vae'
+        loss_name = 'mse' if is_ae else 'vae'
 
     if const.LOG_REMOTE: mlflow.set_tracking_uri(const.MLFLOW_TRACKING_URI)
     with mlflow.start_run():
@@ -64,10 +65,12 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
                 if const.ONLINE:
                     aux_train_loss = torch.vstack([aux_train_loss.to(const.DEVICE), aux_loss_train])
                     aux_valid_loss = torch.vstack([aux_valid_loss.to(const.DEVICE), aux_loss_valid])
-            metrics = {'bce_train_loss': bce_train_loss[1:].mean().item(),
+            scheduler.step()
+            metrics = {'lr': optimizer.param_groups[0]['lr'],
+                       'bce_train_loss': bce_train_loss[1:].mean().item(),
                        'bce_valid_loss': bce_valid_loss[1:].mean().item()}
-            if const.ONLINE: metrics.update({f'{lossname}_train_loss': aux_train_loss[1:].mean().item(),
-                                             f'{lossname}_valid_loss': aux_valid_loss[1:].mean().item()})
+            if const.ONLINE: metrics.update({f'{loss_name}_train_loss': aux_train_loss[1:].mean().item(),
+                                             f'{loss_name}_valid_loss': aux_valid_loss[1:].mean().item()})
             mlflow.log_metrics(metrics, step=epoch)
             if not (epoch+1) % interval:
                 print(f'epoch\t\t\t: {epoch+1}')
@@ -77,13 +80,13 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
                 best = {'loss': metrics['bce_valid_loss'],
                         'parameters': model.state_dict(),
                         'epoch': epoch + 1}
-            elif (epoch + 1 - best['epoch']) > const.EARLY_STOPPING_THRESHOLD: break
+            elif epoch + 1 > const.MIN_EPOCHS and (epoch + 1 - best['epoch']) > const.EARLY_STOPPING_THRESHOLD: break
         model.load_state_dict(best['parameters'])
         mlflow.log_param('selected_epoch', best['epoch'])
         print('-' * 10)
 
 
-def evaluate(classifier, encoder):
+def get_accuracy(classifier, encoder):
     dataloader = torch.utils.data.DataLoader(Dataset('test'), batch_size=const.BATCH_SIZE)
 
     n_corr = 0
@@ -92,6 +95,18 @@ def evaluate(classifier, encoder):
             n_corr += ((classifier(encoder.encode(X.to(const.DEVICE))) > 0.5).to(torch.int) == y.to(const.DEVICE)).sum()
 
     print(f'Accuracy: {n_corr/len(dataloader.dataset)*100}%')
+
+
+def get_f1(classifier, encoder):
+    dataloader = torch.utils.data.DataLoader(Dataset('test'), batch_size=const.BATCH_SIZE)
+
+    net_y, net_pred = torch.empty(1), torch.empty(1)
+    for X, y in dataloader:
+        with torch.no_grad():
+            net_pred = torch.stack([net_y, classifier(encoder.encode(X.to(const.DEVICE)))])
+            net_y = torch.stack([net_y, y])
+
+    print(f'F1: {binary_f1_score(net_pred, net_y)}')
 
 
 if __name__ == '__main__':
@@ -113,4 +128,5 @@ if __name__ == '__main__':
         encoder.model.eval()
         torch.save(encoder.model.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}.pt')
     torch.save(classifier.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}_cls_head.pt')
-    evaluate(classifier, encoder)
+    get_accuracy(classifier, encoder)
+    get_f1(classifier, encoder)

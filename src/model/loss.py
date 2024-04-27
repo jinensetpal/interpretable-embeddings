@@ -17,4 +17,4 @@ class VAELoss(nn.Module):
     def forward(self, recon, X):
         recon, mean, std_dev = recon
         var = std_dev.pow(2)
-        return self.mse(recon, X) - self.alpha * torch.sum(1 + torch.log(var) - mean.pow(2) + var)
+        return self.mse(recon, X) - self.alpha * torch.sum(1 + torch.log(var) - mean.pow(2) - var)
