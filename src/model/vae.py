@@ -21,6 +21,7 @@ class Model(nn.Module):
     def forward(self, x):
         for downsampler in self.downsamplers:
             x = downsampler(x)
+            x = self.relu(x)
 
         mean = self.mean(x)
         std_dev = torch.exp(0.5*self.logvar(x))
@@ -30,6 +31,7 @@ class Model(nn.Module):
             x = enc
             for upsampler in self.upsamplers:
                 x = upsampler(x)
+                x = self.relu(x)
             return (x, mean, std_dev), enc
         else: return enc
 
