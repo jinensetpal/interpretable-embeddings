@@ -103,10 +103,10 @@ def get_f1(classifier, encoder):
     net_y, net_pred = torch.empty(1), torch.empty(1)
     for X, y in dataloader:
         with torch.no_grad():
-            net_pred = torch.stack([net_y, classifier(encoder.encode(X.to(const.DEVICE)))])
+            net_pred = torch.stack([net_y, classifier(encoder.encode(X.to(const.DEVICE))).detach().cpu()])
             net_y = torch.stack([net_y, y])
 
-    print(f'F1: {binary_f1_score(net_pred, net_y)}')
+    print(f'F1: {binary_f1_score(net_pred[1:].squeeze(1), net_y[1:].squeeze(1))}')
 
 
 if __name__ == '__main__':
