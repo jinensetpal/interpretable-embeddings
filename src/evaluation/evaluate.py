@@ -7,7 +7,6 @@ import mlflow
 import torch
 
 from src.evaluation.encoders.autoencoder import AutoEncoder
-from src.evaluation.encoders.umap import UMAPEncoder
 from src.model.loss import VAELoss
 from src.data import Dataset
 from src import const
@@ -86,27 +85,18 @@ def fit(model, encoder, optimizer, scheduler, loss, dataloaders):
         print('-' * 10)
 
 
-def get_accuracy(classifier, encoder):
-    dataloader = torch.utils.data.DataLoader(Dataset('test'), batch_size=const.BATCH_SIZE)
-
-    n_corr = 0
-    for X, y in dataloader:
-        with torch.no_grad():
-            n_corr += ((classifier(encoder.encode(X.to(const.DEVICE))) > 0.5).to(torch.int) == y.to(const.DEVICE)).sum()
-
-    print(f'Accuracy: {n_corr/len(dataloader.dataset)*100}%')
-
-
-def get_f1(classifier, encoder):
+def evaluate(classifier, encoder):
     dataloader = torch.utils.data.DataLoader(Dataset('test'), batch_size=const.BATCH_SIZE)
 
     net_y, net_pred = torch.empty(1), torch.empty(1)
     for X, y in dataloader:
         with torch.no_grad():
-            net_pred = torch.stack([net_y, classifier(encoder.encode(X.to(const.DEVICE))).detach().cpu()])
-            net_y = torch.stack([net_y, y])
+            net_pred = torch.vstack([net_y, classifier(encoder.encode(X.to(const.DEVICE))).detach().cpu()])
+            net_y = torch.vstack([net_y, y])
 
     print(f'F1: {binary_f1_score(net_pred[1:].squeeze(1), net_y[1:].squeeze(1))}')
+    print(f'Accuracy: {(net_y == (net_pred > 0.5)).sum() / net_y.shape[0] * 100}%')
+
 
 
 if __name__ == '__main__':
@@ -128,5 +118,4 @@ if __name__ == '__main__':
         encoder.model.eval()
         torch.save(encoder.model.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}.pt')
     torch.save(classifier.state_dict(), const.MODEL_DIR / f'{const.MODEL_NAME}_cls_head.pt')
-    get_accuracy(classifier, encoder)
-    get_f1(classifier, encoder)
+    evaluate(classifier, encoder)
